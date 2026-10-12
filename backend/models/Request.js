@@ -13,6 +13,7 @@ const VALID_STATUSES = [
   'Approved',
   'Rejected',
   'Ready for Collection',
+  'Completed',
 ];
 
 const requestSchema = new mongoose.Schema(
@@ -64,6 +65,11 @@ const requestSchema = new mongoose.Schema(
       index: true,
     },
     remarks: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    lastUpdatedBy: {
       type: String,
       default: '',
       trim: true,
