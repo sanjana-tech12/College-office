@@ -28,6 +28,9 @@ app.get('/api/health', (req, res) => {
 // Auth Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 
+// Requests Routes
+app.use('/api/requests', require('./routes/requestRoutes'));
+
 // Root route
 app.get('/', (req, res) => {
   res.sendFile(path.join(frontendPath, 'login.html'), (err) => {
