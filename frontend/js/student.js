@@ -1,5 +1,5 @@
 // Student portal logic
-const API_BASE = typeof getApiBase === 'function' ? getApiBase() : (window.location.port === '5000' ? 'http://localhost:3000' : '');
+const API_BASE = typeof getApiBase === 'function' ? getApiBase() : '';
 
 let currentUser = null;
 
@@ -80,44 +80,32 @@ async function loadMyRequests() {
   }
 }
 
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-document.addEventListener('DOMContentLoaded', () => {
+function initStudent() {
   currentUser = checkAuth('student');
   if (!currentUser) return;
 
-  // Set student header info
   const studentBadge = document.getElementById('studentBadge');
   if (studentBadge) {
     const rollText = currentUser.studentId ? ` (${currentUser.studentId})` : '';
     studentBadge.innerText = `${currentUser.name}${rollText}`;
   }
 
-  // Load initial requests
+  // Load requests immediately
   loadMyRequests();
 
-  // Handle request submission
   const form = document.getElementById('newRequestForm');
   if (form) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const alertBox = document.getElementById('requestAlert');
       const submitBtn = document.getElementById('submitBtn');
-      alertBox.innerHTML = '';
+      if (alertBox) alertBox.innerHTML = '';
 
       const requestType = document.getElementById('requestType').value;
       const description = document.getElementById('description').value.trim();
 
       if (!requestType || !description) {
-        alertBox.innerHTML = `<div class="alert alert-danger">Please fill in all fields.</div>`;
+        if (alertBox) alertBox.innerHTML = `<div class="alert alert-danger">Please fill in all fields.</div>`;
         return;
       }
 
@@ -138,19 +126,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         form.reset();
-        alertBox.innerHTML = `
-          <div class="alert alert-success">
-            Request submitted successfully! Generated Tracking ID: <strong>${data.request.requestId}</strong>
-          </div>
-        `;
+        if (alertBox) {
+          alertBox.innerHTML = `
+            <div class="alert alert-success">
+              Request submitted successfully! Generated Tracking ID: <strong>${data.request.requestId}</strong>
+            </div>
+          `;
+        }
 
         await loadMyRequests();
       } catch (err) {
-        alertBox.innerHTML = `<div class="alert alert-danger">${escapeHtml(err.message)}</div>`;
+        if (alertBox) alertBox.innerHTML = `<div class="alert alert-danger">${escapeHtml(err.message)}</div>`;
       } finally {
         submitBtn.disabled = false;
         submitBtn.innerText = 'Submit Request';
       }
     });
   }
-});
+}
+
+// Immediate load detection
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initStudent);
+} else {
+  initStudent();
+}
