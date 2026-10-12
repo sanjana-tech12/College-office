@@ -1,8 +1,9 @@
 // Staff portal logic
-const API_BASE = typeof getApiBase === 'function' ? getApiBase() : (window.location.port === '5000' ? 'http://localhost:3000' : '');
+const API_BASE = typeof getApiBase === 'function' ? getApiBase() : '';
 
 let currentUser = null;
 let activeRequest = null;
+let cachedRequests = [];
 
 // Institutional status flow rules
 const STATUS_TRANSITIONS = {
@@ -30,11 +31,67 @@ function getBadgeClass(status) {
   }
 }
 
-async function loadAllRequests() {
+function renderTable(requests) {
   const tbody = document.getElementById('staffTableBody');
   const countSpan = document.getElementById('requestsCount');
-  const statusFilter = document.getElementById('statusFilter').value;
-  const searchInput = document.getElementById('searchInput').value.trim();
+  if (!tbody) return;
+
+  if (countSpan) {
+    countSpan.innerText = `Total: ${requests.length}`;
+  }
+
+  if (requests.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="8" class="empty-state">
+          <strong>No requests found.</strong>
+          <p>Try adjusting your search query or filter criteria.</p>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = requests.map((req) => {
+    const dateStr = new Date(req.createdAt).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+
+    const isTerminal = req.status === 'Rejected' || req.status === 'Ready for Collection';
+    const actionBtnLabel = isTerminal ? 'Update Remarks' : 'Update Status';
+
+    return `
+      <tr>
+        <td><span class="req-id-tag">${req.requestId}</span></td>
+        <td>
+          <strong>${escapeHtml(req.studentName)}</strong>
+          <div style="font-size: 0.775rem; color: #64748b;">${req.studentRollNo ? escapeHtml(req.studentRollNo) : escapeHtml(req.studentEmail)}</div>
+        </td>
+        <td>${escapeHtml(req.requestType)}</td>
+        <td style="max-width: 240px; word-break: break-word;">${escapeHtml(req.description)}</td>
+        <td style="white-space: nowrap; font-size: 0.85rem; color: #64748b;">${dateStr}</td>
+        <td><span class="badge ${getBadgeClass(req.status)}">${req.status}</span></td>
+        <td style="font-size: 0.85rem; color: #475569; max-width: 200px; word-break: break-word;">
+          ${req.remarks ? escapeHtml(req.remarks) : '<span style="color: #94a3b8;">&mdash;</span>'}
+        </td>
+        <td style="white-space: nowrap;">
+          <button
+            class="btn btn-secondary btn-sm"
+            onclick="openUpdateModal('${req.requestId}')"
+          >
+            ${actionBtnLabel}
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function loadAllRequests() {
+  const statusFilter = document.getElementById('statusFilter')?.value || 'all';
+  const searchInput = document.getElementById('searchInput')?.value.trim() || '';
 
   const queryParams = new URLSearchParams();
   if (statusFilter && statusFilter !== 'all') {
@@ -55,146 +112,96 @@ async function loadAllRequests() {
     }
 
     const data = await res.json();
-    const requests = data.requests || [];
-
-    countSpan.innerText = `Total: ${requests.length}`;
-
-    if (requests.length === 0) {
+    cachedRequests = data.requests || [];
+    renderTable(cachedRequests);
+  } catch (err) {
+    const tbody = document.getElementById('staffTableBody');
+    if (tbody) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="8" class="empty-state">
-            <strong>No requests found.</strong>
-            <p>Try adjusting your search query or filter criteria.</p>
+          <td colspan="8" class="text-center" style="color: #ef4444; padding: 2rem;">
+            Failed to load requests: ${escapeHtml(err.message)}
           </td>
         </tr>
       `;
-      return;
     }
-
-    tbody.innerHTML = requests.map((req) => {
-      const dateStr = new Date(req.createdAt).toLocaleDateString(undefined, {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      });
-
-      const isTerminal = req.status === 'Rejected' || req.status === 'Ready for Collection';
-      const actionBtnLabel = isTerminal ? 'Update Remarks' : 'Update Status';
-
-      return `
-        <tr>
-          <td><span class="req-id-tag">${req.requestId}</span></td>
-          <td>
-            <strong>${escapeHtml(req.studentName)}</strong>
-            <div style="font-size: 0.775rem; color: #64748b;">${req.studentRollNo ? escapeHtml(req.studentRollNo) : escapeHtml(req.studentEmail)}</div>
-          </td>
-          <td>${escapeHtml(req.requestType)}</td>
-          <td style="max-width: 240px; word-break: break-word;">${escapeHtml(req.description)}</td>
-          <td style="white-space: nowrap; font-size: 0.85rem; color: #64748b;">${dateStr}</td>
-          <td><span class="badge ${getBadgeClass(req.status)}">${req.status}</span></td>
-          <td style="font-size: 0.85rem; color: #475569; max-width: 200px; word-break: break-word;">
-            ${req.remarks ? escapeHtml(req.remarks) : '<span style="color: #94a3b8;">&mdash;</span>'}
-          </td>
-          <td style="white-space: nowrap;">
-            <button
-              class="btn btn-secondary btn-sm"
-              onclick="openUpdateModal('${req.requestId}')"
-            >
-              ${actionBtnLabel}
-            </button>
-          </td>
-        </tr>
-      `;
-    }).join('');
-  } catch (err) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="8" class="text-center" style="color: #ef4444; padding: 2rem;">
-          Failed to load requests: ${escapeHtml(err.message)}
-        </td>
-      </tr>
-    `;
   }
 }
 
 function resetFilters() {
-  document.getElementById('statusFilter').value = 'all';
-  document.getElementById('searchInput').value = '';
+  const statusFilter = document.getElementById('statusFilter');
+  const searchInput = document.getElementById('searchInput');
+  if (statusFilter) statusFilter.value = 'all';
+  if (searchInput) searchInput.value = '';
   loadAllRequests();
 }
 
 async function openUpdateModal(requestId) {
   const modal = document.getElementById('updateModal');
   const alertBox = document.getElementById('modalAlert');
-  alertBox.innerHTML = '';
+  if (!modal) return;
+  if (alertBox) alertBox.innerHTML = '';
 
-  try {
-    const res = await fetch(`${API_BASE}/api/requests/${requestId}`, {
-      headers: getAuthHeaders(),
-    });
+  // Use cached data immediately for 0ms modal opening
+  let req = cachedRequests.find((r) => r.requestId === requestId);
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to fetch request.');
-
-    activeRequest = data.request;
-
-    document.getElementById('modalRequestId').innerText = activeRequest.requestId;
-    document.getElementById('modalCurrentStatus').innerHTML = `
-      <span class="badge ${getBadgeClass(activeRequest.status)}">${activeRequest.status}</span>
-    `;
-    document.getElementById('modalStudentName').innerText = `${activeRequest.studentName} (${activeRequest.studentRollNo || activeRequest.studentEmail})`;
-    document.getElementById('modalRequestType').innerText = activeRequest.requestType;
-    document.getElementById('modalRemarks').value = activeRequest.remarks || '';
-
-    // Build Allowed Next Status Options based on Institutional Status Flow
-    const nextStatusSelect = document.getElementById('modalNextStatus');
-    const helpText = document.getElementById('statusFlowHelp');
-    const allowedNext = STATUS_TRANSITIONS[activeRequest.status] || [];
-
-    nextStatusSelect.innerHTML = '';
-
-    // Always include option to keep current status (for remarks-only update)
-    const keepOption = document.createElement('option');
-    keepOption.value = activeRequest.status;
-    keepOption.innerText = `Keep Current Status (${activeRequest.status})`;
-    nextStatusSelect.appendChild(keepOption);
-
-    if (allowedNext.length === 0) {
-      helpText.innerText = `Terminal status reached (${activeRequest.status}). You can update remarks, but status cannot be changed further.`;
-      nextStatusSelect.disabled = false;
-    } else {
-      allowedNext.forEach((targetStatus) => {
-        const opt = document.createElement('option');
-        opt.value = targetStatus;
-        opt.innerText = `Advance to: ${targetStatus}`;
-        nextStatusSelect.appendChild(opt);
+  if (!req) {
+    try {
+      const res = await fetch(`${API_BASE}/api/requests/${requestId}`, {
+        headers: getAuthHeaders(),
       });
-      helpText.innerText = `Allowed workflow transition: ${allowedNext.join(' or ')}`;
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch request.');
+      req = data.request;
+    } catch (err) {
+      alert('Error opening request: ' + err.message);
+      return;
     }
-
-    modal.classList.add('active');
-  } catch (err) {
-    alert('Error opening request: ' + err.message);
   }
+
+  activeRequest = req;
+
+  document.getElementById('modalRequestId').innerText = activeRequest.requestId;
+  document.getElementById('modalCurrentStatus').innerHTML = `
+    <span class="badge ${getBadgeClass(activeRequest.status)}">${activeRequest.status}</span>
+  `;
+  document.getElementById('modalStudentName').innerText = `${activeRequest.studentName} (${activeRequest.studentRollNo || activeRequest.studentEmail})`;
+  document.getElementById('modalRequestType').innerText = activeRequest.requestType;
+  document.getElementById('modalRemarks').value = activeRequest.remarks || '';
+
+  const nextStatusSelect = document.getElementById('modalNextStatus');
+  const helpText = document.getElementById('statusFlowHelp');
+  const allowedNext = STATUS_TRANSITIONS[activeRequest.status] || [];
+
+  nextStatusSelect.innerHTML = '';
+
+  const keepOption = document.createElement('option');
+  keepOption.value = activeRequest.status;
+  keepOption.innerText = `Keep Current Status (${activeRequest.status})`;
+  nextStatusSelect.appendChild(keepOption);
+
+  if (allowedNext.length === 0) {
+    helpText.innerText = `Terminal status reached (${activeRequest.status}). You can update remarks, but status cannot be changed further.`;
+  } else {
+    allowedNext.forEach((targetStatus) => {
+      const opt = document.createElement('option');
+      opt.value = targetStatus;
+      opt.innerText = `Advance to: ${targetStatus}`;
+      nextStatusSelect.appendChild(opt);
+    });
+    helpText.innerText = `Allowed workflow transition: ${allowedNext.join(' or ')}`;
+  }
+
+  modal.classList.add('active');
 }
 
 function closeModal() {
   const modal = document.getElementById('updateModal');
-  modal.classList.remove('active');
+  if (modal) modal.classList.remove('active');
   activeRequest = null;
 }
 
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-document.addEventListener('DOMContentLoaded', () => {
+function initStaff() {
   currentUser = checkAuth('staff');
   if (!currentUser) return;
 
@@ -203,19 +210,24 @@ document.addEventListener('DOMContentLoaded', () => {
     staffBadge.innerText = `${currentUser.name} (Staff)`;
   }
 
+  // Load immediately
   loadAllRequests();
 
-  // Search input on Enter
+  // Instant filter on input & change
   const searchInput = document.getElementById('searchInput');
   if (searchInput) {
-    searchInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        loadAllRequests();
-      }
+    let debounceTimer;
+    searchInput.addEventListener('input', () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(loadAllRequests, 150);
     });
   }
 
-  // Handle Update Status form submit
+  const statusFilter = document.getElementById('statusFilter');
+  if (statusFilter) {
+    statusFilter.addEventListener('change', loadAllRequests);
+  }
+
   const updateForm = document.getElementById('updateStatusForm');
   if (updateForm) {
     updateForm.addEventListener('submit', async (e) => {
@@ -224,7 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const alertBox = document.getElementById('modalAlert');
       const saveBtn = document.getElementById('modalSaveBtn');
-      alertBox.innerHTML = '';
+      if (alertBox) alertBox.innerHTML = '';
 
       const newStatus = document.getElementById('modalNextStatus').value;
       const remarks = document.getElementById('modalRemarks').value;
@@ -248,11 +260,20 @@ document.addEventListener('DOMContentLoaded', () => {
         closeModal();
         await loadAllRequests();
       } catch (err) {
-        alertBox.innerHTML = `<div class="alert alert-danger">${escapeHtml(err.message)}</div>`;
+        if (alertBox) {
+          alertBox.innerHTML = `<div class="alert alert-danger">${escapeHtml(err.message)}</div>`;
+        }
       } finally {
         saveBtn.disabled = false;
         saveBtn.innerText = 'Update Request';
       }
     });
   }
-});
+}
+
+// Immediate load detection
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initStaff);
+} else {
+  initStaff();
+}

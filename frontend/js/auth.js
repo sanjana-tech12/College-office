@@ -3,23 +3,31 @@
 const TOKEN_KEY = 'cot_auth_token';
 const USER_KEY = 'cot_auth_user';
 
-// Dynamic API Base URL: If accessed from port 5000 or an alternate dev port, point to backend on port 3000
+// Use same-origin relative path by default (instantaneous, zero CORS preflight)
+// If frontend is hosted on a separate external port without backend, fallback to port 3000
 function getApiBase() {
-  if (typeof window !== 'undefined' && window.location.port === '5000') {
-    return 'http://localhost:3000';
+  if (typeof window !== 'undefined') {
+    // Both 3000 and 5000 run Express natively; only external dev servers need absolute base
+    if (window.location.port !== '3000' && window.location.port !== '5000' && window.location.port !== '') {
+      return 'http://localhost:3000';
+    }
   }
   return '';
 }
 const API_BASE = getApiBase();
 
 function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch (e) {
+    return null;
+  }
 }
 
 function getUser() {
-  const data = localStorage.getItem(USER_KEY);
-  if (!data) return null;
   try {
+    const data = localStorage.getItem(USER_KEY);
+    if (!data) return null;
     return JSON.parse(data);
   } catch (e) {
     return null;
@@ -27,22 +35,26 @@ function getUser() {
 }
 
 function setSession(token, user) {
-  localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  try {
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  } catch (e) {
+    console.error('Failed to save session to localStorage', e);
+  }
 }
 
 function clearSession() {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+  } catch (e) {
+    console.error('Failed to clear session', e);
+  }
 }
 
 function logout() {
   clearSession();
-  if (document.referrer && document.referrer.includes(':5000')) {
-    window.location.href = 'http://localhost:5000/login.html';
-  } else {
-    window.location.href = 'login.html';
-  }
+  window.location.href = 'login.html';
 }
 
 function getAuthHeaders() {
@@ -53,9 +65,9 @@ function getAuthHeaders() {
   };
 }
 
-// Route guarding helper
+// Route guarding helper with seamless cross-port transfer support
 function checkAuth(expectedRole) {
-  // Support seamless session transfer across ports (e.g. from port 5000 to port 3000)
+  // Transfer session if passed via URL parameters without bouncing
   if (typeof window !== 'undefined') {
     const urlParams = new URLSearchParams(window.location.search);
     const paramToken = urlParams.get('token');
@@ -74,18 +86,13 @@ function checkAuth(expectedRole) {
   const user = getUser();
 
   if (!token || !user) {
-    if (document.referrer && document.referrer.includes(':5000')) {
-      window.location.href = 'http://localhost:5000/login.html';
-    } else {
-      window.location.href = 'login.html';
-    }
+    window.location.href = 'login.html';
     return null;
   }
 
   if (expectedRole && user.role !== expectedRole) {
-    // Redirect to the appropriate portal for the user's role
     if (user.role === 'staff') {
-      window.location.href = 'http://localhost:3000/staff.html';
+      window.location.href = 'staff.html';
     } else {
       window.location.href = 'student.html';
     }
@@ -95,33 +102,52 @@ function checkAuth(expectedRole) {
   return user;
 }
 
-// Redirect already logged-in users away from login/register pages
-function redirectIfLoggedIn() {
+// Render active session banner on login page instead of forced redirect loops
+function checkLoginSessionPrompt() {
   const token = getToken();
   const user = getUser();
-  if (token && user) {
-    if (user.role === 'staff') {
-      window.location.href = `http://localhost:3000/staff.html?token=${encodeURIComponent(token)}&user=${encodeURIComponent(JSON.stringify(user))}`;
-    } else {
-      window.location.href = 'student.html';
-    }
+  const alertBox = document.getElementById('alertBox');
+  if (token && user && alertBox) {
+    const portalUrl = user.role === 'staff' ? 'staff.html' : 'student.html';
+    const roleLabel = user.role === 'staff' ? 'Staff' : 'Student';
+    alertBox.innerHTML = `
+      <div class="alert alert-info" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+        <div>Signed in as <strong>${escapeHtml(user.name)}</strong> (${roleLabel})</div>
+        <div style="display: flex; gap: 0.5rem;">
+          <a href="${portalUrl}" class="btn btn-primary btn-sm">Go to Dashboard</a>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="logout()">Sign Out</button>
+        </div>
+      </div>
+    `;
   }
 }
 
-// Handle Login Form
-document.addEventListener('DOMContentLoaded', () => {
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// Initialize Auth forms with instant execution
+function initAuth() {
+  checkLoginSessionPrompt();
+
   const loginForm = document.getElementById('loginForm');
   if (loginForm) {
-    redirectIfLoggedIn();
-
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const alertBox = document.getElementById('alertBox');
-      alertBox.innerHTML = '';
+      const submitBtn = loginForm.querySelector('button[type="submit"]');
+      if (alertBox) alertBox.innerHTML = '';
 
       const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
-      const submitBtn = loginForm.querySelector('button[type="submit"]');
+
+      if (!email || !password) return;
 
       submitBtn.disabled = true;
       submitBtn.innerText = 'Logging in...';
@@ -141,39 +167,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
         setSession(data.token, data.user);
 
+        // Instant smooth transition based on user role
         if (data.user.role === 'staff') {
-          // Seamlessly transfer session and open http://localhost:3000/staff.html
-          window.location.href = `http://localhost:3000/staff.html?token=${encodeURIComponent(data.token)}&user=${encodeURIComponent(JSON.stringify(data.user))}`;
+          window.location.href = 'staff.html';
         } else {
           window.location.href = 'student.html';
         }
       } catch (err) {
-        alertBox.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+        if (alertBox) {
+          alertBox.innerHTML = `<div class="alert alert-danger">${escapeHtml(err.message)}</div>`;
+        }
         submitBtn.disabled = false;
         submitBtn.innerText = 'Log In';
       }
     });
   }
 
-  // Handle Register Form
   const registerForm = document.getElementById('registerForm');
   if (registerForm) {
-    redirectIfLoggedIn();
-
     registerForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const alertBox = document.getElementById('alertBox');
-      alertBox.innerHTML = '';
+      const submitBtn = registerForm.querySelector('button[type="submit"]');
+      if (alertBox) alertBox.innerHTML = '';
 
       const name = document.getElementById('name').value.trim();
       const email = document.getElementById('email').value.trim();
       const studentId = document.getElementById('studentId').value.trim();
       const password = document.getElementById('password').value;
       const confirmPassword = document.getElementById('confirmPassword').value;
-      const submitBtn = registerForm.querySelector('button[type="submit"]');
 
       if (password !== confirmPassword) {
-        alertBox.innerHTML = `<div class="alert alert-danger">Passwords do not match.</div>`;
+        if (alertBox) {
+          alertBox.innerHTML = `<div class="alert alert-danger">Passwords do not match.</div>`;
+        }
         return;
       }
 
@@ -196,10 +223,19 @@ document.addEventListener('DOMContentLoaded', () => {
         setSession(data.token, data.user);
         window.location.href = 'student.html';
       } catch (err) {
-        alertBox.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+        if (alertBox) {
+          alertBox.innerHTML = `<div class="alert alert-danger">${escapeHtml(err.message)}</div>`;
+        }
         submitBtn.disabled = false;
         submitBtn.innerText = 'Register Account';
       }
     });
   }
-});
+}
+
+// Immediate load detection
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initAuth);
+} else {
+  initAuth();
+}
