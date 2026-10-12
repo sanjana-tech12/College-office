@@ -50,6 +50,7 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 3000;
+const ALT_PORT = process.env.ALT_PORT || 5000;
 
 // Start server after connecting to database
 if (process.env.NODE_ENV !== 'test') {
@@ -57,6 +58,20 @@ if (process.env.NODE_ENV !== 'test') {
     app.listen(PORT, () => {
       console.log(`[Server] College Office Request Tracker running on port ${PORT}`);
     });
+
+    // Also listen on ALT_PORT (5000) for seamless cross-port access if available
+    if (ALT_PORT && String(ALT_PORT) !== String(PORT)) {
+      try {
+        const altServer = app.listen(ALT_PORT, () => {
+          console.log(`[Server] Secondary port enabled: listening on port ${ALT_PORT} (http://localhost:${ALT_PORT})`);
+        });
+        altServer.on('error', (err) => {
+          console.log(`[Server] Secondary port ${ALT_PORT} unavailable (${err.message}). Running on primary port ${PORT}.`);
+        });
+      } catch (e) {
+        // Fallback gracefully if secondary port binding fails
+      }
+    }
   });
 }
 

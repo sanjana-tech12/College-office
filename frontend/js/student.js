@@ -1,4 +1,5 @@
 // Student portal logic
+const API_BASE = typeof getApiBase === 'function' ? getApiBase() : (window.location.port === '5000' ? 'http://localhost:3000' : '');
 
 let currentUser = null;
 
@@ -24,7 +25,7 @@ async function loadMyRequests() {
   if (!tbody) return;
 
   try {
-    const res = await fetch('/api/requests/my', {
+    const res = await fetch(`${API_BASE}/api/requests/my`, {
       headers: getAuthHeaders(),
     });
 
@@ -124,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
       submitBtn.innerText = 'Submitting...';
 
       try {
-        const res = await fetch('/api/requests', {
+        const res = await fetch(`${API_BASE}/api/requests`, {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify({ requestType, description }),
