@@ -1,4 +1,5 @@
 // Staff portal logic
+const API_BASE = typeof getApiBase === 'function' ? getApiBase() : (window.location.port === '5000' ? 'http://localhost:3000' : '');
 
 let currentUser = null;
 let activeRequest = null;
@@ -44,7 +45,7 @@ async function loadAllRequests() {
   }
 
   try {
-    const res = await fetch(`/api/requests?${queryParams.toString()}`, {
+    const res = await fetch(`${API_BASE}/api/requests?${queryParams.toString()}`, {
       headers: getAuthHeaders(),
     });
 
@@ -128,7 +129,7 @@ async function openUpdateModal(requestId) {
   alertBox.innerHTML = '';
 
   try {
-    const res = await fetch(`/api/requests/${requestId}`, {
+    const res = await fetch(`${API_BASE}/api/requests/${requestId}`, {
       headers: getAuthHeaders(),
     });
 
@@ -232,7 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
       saveBtn.innerText = 'Updating...';
 
       try {
-        const res = await fetch(`/api/requests/${activeRequest.requestId}`, {
+        const res = await fetch(`${API_BASE}/api/requests/${activeRequest.requestId}`, {
           method: 'PATCH',
           headers: getAuthHeaders(),
           body: JSON.stringify({ status: newStatus, remarks }),
