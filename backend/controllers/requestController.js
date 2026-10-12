@@ -3,14 +3,15 @@ const { Request, VALID_REQUEST_TYPES, VALID_STATUSES } = require('../models/Requ
 const Counter = require('../models/Counter');
 
 // Strict status flow transition map
-// Submitted -> In Progress -> Approved | Rejected; Approved -> Ready for Collection.
-// Rejected and Ready for Collection are terminal.
+// Submitted -> In Progress -> Approved | Rejected; Approved -> Ready for Collection | Completed.
+// Ready for Collection -> Completed. Rejected and Completed are terminal.
 const STATUS_TRANSITIONS = {
   'Submitted': ['In Progress'],
-  'In Progress': ['Approved', 'Rejected'],
-  'Approved': ['Ready for Collection'],
+  'In Progress': ['Approved', 'Rejected', 'Completed'],
+  'Approved': ['Ready for Collection', 'Completed'],
+  'Ready for Collection': ['Completed'],
   'Rejected': [],
-  'Ready for Collection': [],
+  'Completed': [],
 };
 
 // POST /api/requests (Student only: submit new request)
@@ -188,6 +189,9 @@ const updateRequest = async (req, res, next) => {
     if (remarks !== undefined) {
       request.remarks = remarks.trim();
     }
+
+    // Record staff audit trail
+    request.lastUpdatedBy = req.user.email;
 
     await request.save();
 
