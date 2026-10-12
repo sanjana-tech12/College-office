@@ -23,6 +23,8 @@ function getBadgeClass(status) {
       return 'badge-rejected';
     case 'Ready for Collection':
       return 'badge-ready-for-collection';
+    case 'Completed':
+      return 'badge-completed';
     default:
       return 'badge-submitted';
   }

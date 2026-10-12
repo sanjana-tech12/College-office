@@ -20,6 +20,8 @@
   --status-rejected-text: #991b1b;
   --status-ready-bg: #ede9fe;
   --status-ready-text: #5b21b6;
+  --status-completed-bg: #ccfbf1;
+  --status-completed-text: #0f766e;
 }
 
 * {
@@ -307,6 +309,23 @@ textarea.form-control {
   background-color: var(--status-ready-bg);
   color: var(--status-ready-text);
   border: 1px solid #ddd6fe;
+}
+
+.badge-completed {
+  background-color: var(--status-completed-bg);
+  color: var(--status-completed-text);
+  border: 1px solid #99f6e4;
+}
+
+.badge-secure-staff {
+  background-color: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.775rem;
+  padding: 0.25rem 0.6rem;
 }
 
 /* Tables */

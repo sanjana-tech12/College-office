@@ -13,6 +13,7 @@
       College Office Staff Dashboard
     </a>
     <div class="nav-user">
+      <span class="badge-secure-staff" title="Protected Staff Session with Server-Side Auth and Auto-Lock">&#128274; Secure Staff Session</span>
       <div class="user-badge" id="staffBadge">Loading...</div>
       <a href="login.html" class="btn btn-secondary btn-sm" onclick="clearSession()" style="text-decoration: none; font-size: 0.8rem;">Switch Account</a>
       <button class="btn-logout" onclick="logout()">Sign Out</button>
@@ -37,6 +38,7 @@
             <option value="Approved">Approved</option>
             <option value="Rejected">Rejected</option>
             <option value="Ready for Collection">Ready for Collection</option>
+            <option value="Completed">Completed</option>
           </select>
         </div>
 
@@ -111,6 +113,10 @@
             <div class="info-item">
               <span>Service Type</span>
               <span id="modalRequestType">-</span>
+            </div>
+            <div class="info-item" id="modalLastUpdatedByContainer" style="display: none; grid-column: span 2;">
+              <span>Staff Audit Log</span>
+              <span id="modalLastUpdatedBy" style="font-weight: 500; color: #475569;">-</span>
             </div>
           </div>
 
