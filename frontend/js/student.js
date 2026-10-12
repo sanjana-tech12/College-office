@@ -1,7 +1,15 @@
-// Student portal logic
-const API_BASE = typeof getApiBase === 'function' ? getApiBase() : '';
-
+// Student portal logic (API_BASE provided by auth.js)
 let currentUser = null;
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
 function getBadgeClass(status) {
   switch (status) {

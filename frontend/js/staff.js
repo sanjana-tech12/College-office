@@ -1,9 +1,17 @@
-// Staff portal logic
-const API_BASE = typeof getApiBase === 'function' ? getApiBase() : '';
-
+// Staff portal logic (API_BASE provided by auth.js)
 let currentUser = null;
 let activeRequest = null;
 let cachedRequests = [];
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
 // Institutional status flow rules
 const STATUS_TRANSITIONS = {
