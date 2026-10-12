@@ -16,10 +16,11 @@ function escapeHtml(str) {
 // Institutional status flow rules
 const STATUS_TRANSITIONS = {
   'Submitted': ['In Progress'],
-  'In Progress': ['Approved', 'Rejected'],
-  'Approved': ['Ready for Collection'],
+  'In Progress': ['Approved', 'Rejected', 'Completed'],
+  'Approved': ['Ready for Collection', 'Completed'],
+  'Ready for Collection': ['Completed'],
   'Rejected': [],
-  'Ready for Collection': [],
+  'Completed': [],
 };
 
 function getBadgeClass(status) {
@@ -34,6 +35,8 @@ function getBadgeClass(status) {
       return 'badge-rejected';
     case 'Ready for Collection':
       return 'badge-ready-for-collection';
+    case 'Completed':
+      return 'badge-completed';
     default:
       return 'badge-submitted';
   }
@@ -177,6 +180,17 @@ async function openUpdateModal(requestId) {
   document.getElementById('modalRequestType').innerText = activeRequest.requestType;
   document.getElementById('modalRemarks').value = activeRequest.remarks || '';
 
+  const auditContainer = document.getElementById('modalLastUpdatedByContainer');
+  const auditText = document.getElementById('modalLastUpdatedBy');
+  if (auditContainer && auditText) {
+    if (activeRequest.lastUpdatedBy) {
+      auditContainer.style.display = 'flex';
+      auditText.innerText = activeRequest.lastUpdatedBy;
+    } else {
+      auditContainer.style.display = 'none';
+    }
+  }
+
   const nextStatusSelect = document.getElementById('modalNextStatus');
   const helpText = document.getElementById('statusFlowHelp');
   const allowedNext = STATUS_TRANSITIONS[activeRequest.status] || [];
@@ -249,6 +263,14 @@ function initStaff() {
       const newStatus = document.getElementById('modalNextStatus').value;
       const remarks = document.getElementById('modalRemarks').value;
 
+      // Security confirmation for terminal status transitions
+      if ((newStatus === 'Rejected' || newStatus === 'Completed') && newStatus !== activeRequest.status) {
+        const confirmMsg = `Security Confirmation:\nAdvancing this request to '${newStatus}' is a permanent action and cannot be undone.\n\nDo you want to proceed?`;
+        if (!window.confirm(confirmMsg)) {
+          return;
+        }
+      }
+
       saveBtn.disabled = true;
       saveBtn.innerText = 'Updating...';
 
@@ -277,6 +299,56 @@ function initStaff() {
       }
     });
   }
+
+  // Security: Background verify staff role against backend
+  verifyStaffSession();
+
+  // Security: Start idle inactivity auto-lock monitor (15 minutes)
+  initStaffInactivityLock();
+}
+
+// Security: Verify JWT and role directly with backend
+async function verifyStaffSession() {
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/me`, {
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error('Session invalid');
+    const data = await res.json();
+    if (!data.user || data.user.role !== 'staff') {
+      throw new Error('Role mismatch');
+    }
+  } catch (e) {
+    clearSession();
+    if (typeof alert === 'function') {
+      alert('Staff Security Alert: Your session is invalid or unauthorized. Redirecting to login.');
+    }
+    window.location.href = 'login.html';
+  }
+}
+
+// Security: 15-minute inactivity auto-logout to protect unattended terminals
+const STAFF_INACTIVITY_LIMIT_MS = 15 * 60 * 1000;
+let staffInactivityTimer = null;
+
+function resetStaffInactivity() {
+  clearTimeout(staffInactivityTimer);
+  staffInactivityTimer = setTimeout(() => {
+    clearSession();
+    if (typeof alert === 'function') {
+      alert('Staff Security Alert: Your session has been locked due to 15 minutes of inactivity.');
+    }
+    window.location.href = 'login.html';
+  }, STAFF_INACTIVITY_LIMIT_MS);
+}
+
+function initStaffInactivityLock() {
+  if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+    ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach((event) => {
+      window.addEventListener(event, resetStaffInactivity, { passive: true });
+    });
+  }
+  resetStaffInactivity();
 }
 
 // Immediate load detection
