@@ -12,7 +12,8 @@ The **College Office Request Tracker** streamlines certificate and service reque
 - **Staff**: Log in with seeded administrative credentials, inspect all requests, filter by status, search by request ID, advance the request lifecycle, and append official remarks.
 - **Sequential IDs**: Generates atomic IDs (`REQ-0001`, `REQ-0002`) via an atomic MongoDB Counter collection.
 - **Status Lifecycle**: Strictly enforces institutional state progression:  
-  `Submitted` &rarr; `In Progress` &rarr; `Approved` | `Rejected` &rarr; `Ready for Collection` (Terminal). Any invalid jump returns HTTP 400.
+  `Submitted` &rarr; `In Progress` &rarr; `Approved` | `Rejected` &rarr; `Ready for Collection` &rarr; `Completed`. `Rejected` and `Completed` are terminal states. Any invalid transition returns HTTP 400.
+- **Staff Portal Security**: Includes 15-minute inactivity auto-lock for unattended desks, server-side token & role verification (`/api/auth/me`), staff audit trail logging (`lastUpdatedBy`), and HTTP security headers (`X-Frame-Options`, `X-Content-Type-Options`, `X-XSS-Protection`).
 - **Role Isolation**: Cross-student viewing and student access to staff endpoints return HTTP 403 Forbidden.
 
 ---
