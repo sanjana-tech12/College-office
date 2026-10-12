@@ -14,7 +14,10 @@ function getApiBase() {
   }
   return '';
 }
-const API_BASE = getApiBase();
+var API_BASE = getApiBase();
+if (typeof window !== 'undefined') {
+  window.API_BASE = API_BASE;
+}
 
 function getToken() {
   try {
