@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Registration - College Office Request Tracker</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="auth-wrapper">
+    <div class="auth-card">
+      <div class="auth-header">
+        <h1>Student Registration</h1>
+        <p>Create an account to submit and track requests</p>
+      </div>
+
+      <div class="alert alert-info" style="font-size: 0.8rem;">
+        Note: Public registration creates Student accounts only. Staff accounts are seeded by administrators.
+      </div>
+
+      <div id="alertBox"></div>
+
+      <form id="registerForm">
+        <div class="form-group">
+          <label class="form-label" for="name">Full Name</label>
+          <input
+            type="text"
+            id="name"
+            class="form-control"
+            placeholder="e.g. John Doe"
+            required
+            autocomplete="name"
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="email">Student Email</label>
+          <input
+            type="email"
+            id="email"
+            class="form-control"
+            placeholder="e.g. john@student.college.edu"
+            required
+            autocomplete="email"
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="studentId">Roll Number / Student ID</label>
+          <input
+            type="text"
+            id="studentId"
+            class="form-control"
+            placeholder="e.g. CS2024-042"
+          >
+          <div class="form-hint">Used for identification on printed certificates</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password (min 6 characters)</label>
+          <input
+            type="password"
+            id="password"
+            class="form-control"
+            placeholder="Create password"
+            required
+            minlength="6"
+            autocomplete="new-password"
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="confirmPassword">Confirm Password</label>
+          <input
+            type="password"
+            id="confirmPassword"
+            class="form-control"
+            placeholder="Re-enter password"
+            required
+            minlength="6"
+            autocomplete="new-password"
+          >
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Register Account</button>
+      </form>
+
+      <div class="text-center mt-3" style="font-size: 0.875rem;">
+        Already registered? <a href="login.html" style="color: var(--primary); text-decoration: none; font-weight: 600;">Log in here</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/auth.js"></script>
+</body>
+</html>
