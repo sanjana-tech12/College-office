@@ -25,6 +25,7 @@ The **College Office Request Tracker** streamlines certificate and service reque
 - **Authentication**: JWT, bcryptjs password hashing
 - **Frontend**: Vanilla HTML5, CSS3, JavaScript (served by Express)
 - **DevOps**: Docker, Docker Compose, GitHub Actions CI
+- **Monitoring & Observability**: Prometheus, Grafana, prom-client
 
 ---
 
@@ -47,18 +48,25 @@ docker compose up --build -d
 ```bash
 docker compose ps
 ```
-Both `college_tracker_mongo` and `college_tracker_app` should show state `healthy` (app on port `3000`, mongo on `27017`).
+The stack spins up 4 containers:
+- `college_tracker_app` on port `3000` (Node.js API & UI)
+- `college_tracker_mongo` on port `27017` (MongoDB database)
+- `college_tracker_prometheus` on port `9090` (Metrics scraping)
+- `college_tracker_grafana` on port `3001` (Metrics dashboard)
 
 ### 4. Seed Staff Account
 ```bash
 docker compose exec app node backend/scripts/seedStaff.js
 ```
 
-### Default Credentials
-| Role | Email | Password |
+### Endpoints & Credentials
+| Service | URL | Credentials / Notes |
 |---|---|---|
-| **Staff** | `staff@college.edu` | `Staff@123` |
-| **Student** | Self-register at `http://localhost:3000/register.html` | User created |
+| **Web Portal** | `http://localhost:3000` | Staff & Student portals |
+| **Prometheus UI** | `http://localhost:9090` | Metrics target `app:3000` (State: UP) |
+| **Grafana Dashboard** | `http://localhost:3001` | Username: `admin`, Password: `admin` |
+| **Default Staff** | `http://localhost:3000` | `staff@college.edu` / `Staff@123` |
+| **Student Self-Register** | `http://localhost:3000/register.html` | User created |
 
 Access the application in your browser at: **`http://localhost:3000`**
 
@@ -77,6 +85,7 @@ Access the application in your browser at: **`http://localhost:3000`**
 | `GET` | `/api/requests/:requestId` | Student (own) / Staff (any) | Fetch specific request details | `200`, `403`, `404` |
 | `GET` | `/api/requests` | Staff | View all requests (`?status=` and `?search=`) | `200`, `403` |
 | `PATCH` | `/api/requests/:requestId` | Staff | Update status & remarks (validates flow) | `200`, `400`, `403`, `404` |
+| `GET` | `/metrics` | Public / Prometheus | Prometheus metrics scraping endpoint | `200` |
 
 ---
 
