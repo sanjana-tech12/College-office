@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Portal - College Office Request Tracker</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <a href="student.html" class="nav-brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+      College Office Portal
+    </a>
+    <div class="nav-user">
+      <div class="user-badge" id="studentBadge">Loading...</div>
+      <a href="login.html" class="btn btn-secondary btn-sm" onclick="clearSession()" style="text-decoration: none; font-size: 0.8rem;">Switch Account</a>
+      <button class="btn-logout" onclick="logout()">Sign Out</button>
+    </div>
+  </nav>
+
+  <main class="container">
+    <!-- Submit New Request Card -->
+    <div class="card">
+      <h2 class="card-title">Submit New Request</h2>
+      <div id="requestAlert"></div>
+
+      <form id="newRequestForm">
+        <div class="form-group">
+          <label class="form-label" for="requestType">Request Type</label>
+          <select id="requestType" class="form-control" required>
+            <option value="" disabled selected>-- Select Certificate / Service --</option>
+            <option value="Bonafide Certificate">Bonafide Certificate</option>
+            <option value="Transcript">Transcript</option>
+            <option value="ID Card">ID Card</option>
+            <option value="Fee Receipt">Fee Receipt</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="description">Reason & Details</label>
+          <textarea
+            id="description"
+            class="form-control"
+            placeholder="Please specify the purpose (e.g. Visa application, scholarship, loss of ID) and any semester/year details..."
+            required
+          ></textarea>
+        </div>
+
+        <button type="submit" id="submitBtn" class="btn btn-primary">Submit Request</button>
+      </form>
+    </div>
+
+    <!-- My Requests Card -->
+    <div class="card">
+      <div class="card-title">
+        <span>My Requests</span>
+        <button class="btn btn-secondary btn-sm" onclick="loadMyRequests()">Refresh</button>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Request ID</th>
+              <th>Type</th>
+              <th>Description</th>
+              <th>Submitted Date</th>
+              <th>Status</th>
+              <th>Staff Remarks</th>
+            </tr>
+          </thead>
+          <tbody id="requestsTableBody">
+            <tr>
+              <td colspan="6" class="text-center" style="padding: 2rem;">Loading your requests...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/auth.js"></script>
+  <script src="js/student.js"></script>
+</body>
+</html>
