@@ -17,4 +17,5 @@ Thumbs.db
 .vscode/
 *.suo
 *.ntvs*
-*.njsproj
+# Other projects
+ml-monitoring-system/
